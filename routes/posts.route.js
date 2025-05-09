@@ -4,13 +4,39 @@ const { isValidObjectId } = require('mongoose');
 const Post = require('../models/posts.model');
 
 postRoute.get("/", async (req, res) => {
+ 
+  const { page = 1, limit = 10 } = req.query;
+  
+  
+  const pageNumber = parseInt(page);
+  const limitNumber = parseInt(limit);
+
+  
+  const skip = (pageNumber - 1) * limitNumber;
+
   try {
-    const posts = await Post.find().sort({ _id: -1 }).populate('author', 'name email');
-    res.json(posts);
+    
+    const posts = await Post.find()
+      .skip(skip) 
+      .limit(limitNumber) 
+      .sort({ _id: -1 })
+      .populate('author', 'name email');
+
+    
+    const totalPosts = await Post.countDocuments();
+
+    
+    res.json({
+      posts,
+      totalPosts,
+      totalPages: Math.ceil(totalPosts / limitNumber), 
+      currentPage: pageNumber, 
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching posts', error });
   }
 });
+
 
 postRoute.post("/", async (req, res) => {
   const { title, content } = req.body;
