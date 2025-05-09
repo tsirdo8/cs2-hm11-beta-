@@ -13,7 +13,7 @@ require("dotenv").config()
         return res.status(400).json({ message: error.error.message });
     }
 
-    const { name, email, password, phoneNumber, address } = req.body;
+    const { name, email, password, phoneNumber, address, adminStatus } = req.body;
     console.log(req.body)
     const existUser = await User.findOne({ email });
     if (existUser) {
@@ -26,6 +26,7 @@ require("dotenv").config()
         email,password: hashedPassword,
         phoneNumber,
         address,
+        adminStatus: adminStatus || false,
 
     })
 
@@ -53,6 +54,7 @@ authRouter.post("/sign-in", async (req, res) => {
 
     const payLoad = {
         userId: existUser._id,
+        adminStatus: existUser.adminStatus
     }
 
     const token = await  jwt.sign(payLoad, process.env.JWT_SECRET, {expiresIn: '1h'})
@@ -62,11 +64,19 @@ authRouter.post("/sign-in", async (req, res) => {
 });
 
 
-authRouter.get("/current-user",isAuth, async(req,res)=>{
-    const user = await User.findById(req.userId)
-    res.json(user)
+authRouter.get("/current-user", isAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("email adminStatus");
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-})
+    res.json({ email: user.email, adminStatus: user.adminStatus });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching user data' });
+  }
+});
+
 
 
 
